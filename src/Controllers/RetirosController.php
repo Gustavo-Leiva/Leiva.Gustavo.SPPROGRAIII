@@ -6,12 +6,18 @@ use Slim\Factory\AppFactory;
 use Retiro;
 use Usuario;
 use Cuenta;
-use Autenticador;
+use AutentificadorJWT;
+use AccesoDatos;
+use Exception;
+
+
 
 require_once '../src/Clases/Cuenta.php';
 require_once '../src/Clases/Retiro.php';
 require_once '../src/Clases/Usuario.php';
-require_once '../src/Clases/Autenticador.php';
+require_once '../src/Clases/AutentificadorJWT.php';
+require_once '../src/Clases/Logger.php';
+require_once '../src/AccesoDatos.php';
 
 class RetirosController
 {
@@ -23,69 +29,15 @@ class RetirosController
         return $response;
     }
 
-    // public static function POST_insertarRetiro(Request $request, Response $response, array $args){
-    //     $param = $request->getQueryParams();
-    //     $retorno = null; // Definir $retorno inicialmente como null
-    
-    //     if (!isset($param['token'])) {
-    //         $retorno = json_encode(array("mensaje" => "Token necesario"));
-    //     } else {
-    //         $token = $param['token'];
-    //         $respuesta = Autenticador::validar_token($token, "Admin");
-    
-    //         if ($respuesta == "Validado") {
-    //             $parametros = $request->getParsedBody();
-    //             $numeroCuenta = $parametros['numeroCuenta'];
-    //             $tipoCuenta = $parametros['tipoCuenta'];
-    //             $moneda = $parametros['moneda'];
-    //             $importeRetirar = $parametros['importeRetirar'];
-    
-    //             // Validar el tipo de cuenta y la moneda
-    //             if (in_array($tipoCuenta, self::$tipoCuentas) && in_array($moneda, self::$tipoMoneda)) {
-    //                 $cuenta = new Retiro($numeroCuenta, $tipoCuenta, $moneda, $importeRetirar);
-    //                 $ok = $cuenta->insertarRetiro();
-    
-    //                 // var_dump($ok);
-    //                 if ($ok != null) {
-    //                     $retorno = json_encode(array("mensaje" => "Retiro realizado con exito"));
-    //                 } else {
-    //                     $retorno = json_encode(array("mensaje" => "No se pudo realizar el retiro"));
-    //                 }
-    //             } else {
-    //                 $mensajeError = "Retiro no valido. ";
-    
-    //                 if (!in_array($tipoCuenta, self::$tipoCuentas)) {
-    //                     $mensajeError .= "Tipo de cuenta no es valido. Debe ser 'CA' o 'CC'. ";
-    //                 }
-    
-    //                 if (!in_array($moneda, self::$tipoMoneda)) {
-    //                     $mensajeError .= "Moneda no es valida. Debe ser '$' o 'USD'.";
-    //                 }
-    
-    //                 $retorno = json_encode(array("mensaje" => $mensajeError));
-    //             }
-    //         } else {
-    //             $retorno = json_encode(array("mensaje" => $respuesta));
-    //         }
-    //     }
-    
-    //     $response->getBody()->write($retorno);
-    //     return $response;
-    // }
-
-
+   
+    //ok visto
     public static function POST_insertarRetiro(Request $request, Response $response, array $args)
     {
-        $param = $request->getQueryParams();
-        $retorno = null; // Definir $retorno inicialmente como null
+     
+        $token = $request->getHeaderLine('Authorization');
+        $userId = self::obtenerUserIdDesdeToken($token);
 
-        if (!isset($param['token'])) {
-            $retorno = json_encode(["mensaje" => "Token necesario"]);
-        } else {
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
 
-            if ($respuesta == "Validado") {
                 $parametros = $request->getParsedBody();
                 $numeroCuenta = $parametros['numeroCuenta'];
                 $tipoCuenta = $parametros['tipoCuenta'];
@@ -105,6 +57,11 @@ class RetirosController
                         // Verificar el mensaje y tomar acciones según el resultado
                         if ($respuestaArray["mensaje"] == "Retiro realizado con exito") {
                             $retorno = json_encode(["mensaje" => "Operacion exitosa"]);
+                            $usuario =Usuario::obtenerInstanciaVacia(); // Instanciar un objeto Usuario sin proporcionar argumentos
+                            $operationNumber = $usuario->obtenerOperationNumber();
+                            // Registrar la transacción en el log
+                            $logger = AccesoDatos::obtenerConexionDatos()->obtenerLogger();
+                            $logger->logTransaction($userId, $operationNumber);
                         } elseif ($respuestaArray["mensaje"] == "El importe a retirar es mayor a su saldo actual") {
                             $retorno = json_encode(["mensaje" => "Fondos insuficientes"]);
                         } elseif ($respuestaArray["mensaje"] == "El numero de cuenta no existe") {
@@ -128,53 +85,43 @@ class RetirosController
 
                     $retorno = json_encode(["mensaje" => $mensajeError]);
                 }
-            } else {
-                $retorno = json_encode(["mensaje" => $respuesta]);
-            }
-        }
+           
+        
 
         $response->getBody()->write($retorno);
         return $response;
     }
     
-
-  
+    
 
 
 
     public static function GET_traerTodos(Request $request, Response $response, array $args){
-        $param = $request->getQueryParams();
-        if(!isset($param['token'])){
-            $retorno = json_encode(array("mensaje" => "Token necesario"));
-        }
-        else{
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-            if($respuesta == "Validado"){
-                $retiros = Retiro::obtenerTodos();
-                $retorno = json_encode(array("Retiros"=>$retiros));
-            }
-            else{
-                $retorno = json_encode(array("mensaje" => $respuesta));
-            }
-        } 
+        $token = $request->getHeaderLine('Authorization');
+        $userId = self::obtenerUserIdDesdeToken($token);
+        $retiros = Retiro::obtenerTodos();
+        $retorno = json_encode(array("Retiros"=>$retiros));
         $response->getBody()->write($retorno);
+        $usuario =Usuario::obtenerInstanciaVacia(); // Instanciar un objeto Usuario sin proporcionar argumentos
+        $operationNumber = $usuario->obtenerOperationNumber();
+        // Registrar la transacción en el log
+        $logger = AccesoDatos::obtenerConexionDatos()->obtenerLogger();
+        $logger->logTransaction($userId, $operationNumber);
+
         return $response;
     }
 
 
 
+    //ok visto
     public static function GET_totalRetiradoPorTipoCuentaYMonedaEnFecha(Request $request, Response $response, array $args)
     {
+              
+        $token = $request->getHeaderLine('Authorization');
+        $userId = self::obtenerUserIdDesdeToken($token);
+
         $param = $request->getQueryParams();
     
-        if (!isset($param['token'])) {
-            $retorno = json_encode(["mensaje" => "Token necesario"]);
-        } else {
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-    
-            if ($respuesta == "Validado") {
                 // Obtener la fecha del parámetro o usar la fecha del día anterior si no se proporciona
                 $fecha = isset($param['fecha']) ? $param['fecha'] : date('Y-m-d', strtotime("-1 days"));
     
@@ -182,27 +129,26 @@ class RetirosController
                 $totalRetirado = Retiro::totalRetiradoPorTipoCuentaYMonedaEnFecha($fecha);
     
                 $retorno = json_encode(["TotalRetirado" => $totalRetirado]);
-            } else {
-                $retorno = json_encode(["mensaje" => $respuesta]);
-            }
-        }
+          
+                $usuario =Usuario::obtenerInstanciaVacia(); // Instanciar un objeto Usuario sin proporcionar argumentos
+                $operationNumber = $usuario->obtenerOperationNumber();
+                // Registrar la transacción en el log
+                $logger = AccesoDatos::obtenerConexionDatos()->obtenerLogger();
+                $logger->logTransaction($userId, $operationNumber);
     
         $response->getBody()->write($retorno);
         return $response;
     }
 
+    //ok visto
     public static function GET_traer_retiros_por_usuario(Request $request, Response $response, array $args)
     {
+        $token = $request->getHeaderLine('Authorization');
+        $userId = self::obtenerUserIdDesdeToken($token);
+
         $param = $request->getQueryParams();
     
-        if (!isset($param['token'])) {
-            $retorno = json_encode(["mensaje" => "Token necesario"]);
-        } else {
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-    
-            if ($respuesta == "Validado") {
-                if (!isset($param['numero_cuenta'])) {
+                 if (!isset($param['numero_cuenta'])) {
                     $retorno = json_encode(["mensaje" => "Número de cuenta necesario"]);
                 } else {
                     $numeroCuenta = $param['numero_cuenta'];
@@ -220,26 +166,28 @@ class RetirosController
                         $retorno = json_encode(["mensaje" => "La cuenta no existe"]);
                     }
                 }
-            } else {
-                $retorno = json_encode(["mensaje" => $respuesta]);
-            }
-        }
+           
+              
+                $usuario =Usuario::obtenerInstanciaVacia(); // Instanciar un objeto Usuario sin proporcionar argumentos
+                $operationNumber = $usuario->obtenerOperationNumber();
+                // Registrar la transacción en el log
+                $logger = AccesoDatos::obtenerConexionDatos()->obtenerLogger();
+                $logger->logTransaction($userId, $operationNumber);
     
         $response->getBody()->write($retorno);
         return $response;
     }
 
+
+    //ok visto
     public static function GET_traer_retiros_entre_fechas_ordenados(Request $request, Response $response, array $args)
     {
+        $token = $request->getHeaderLine('Authorization');
+        $userId = self::obtenerUserIdDesdeToken($token);
+
         $param = $request->getQueryParams();
     
-        if (!isset($param['token'])) {
-            $retorno = json_encode(["mensaje" => "Token necesario"]);
-        } else {
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-    
-            if ($respuesta == "Validado") {
+       
                 if (!isset($param['fecha_inicio']) || !isset($param['fecha_fin'])) {
                     $retorno = json_encode(["mensaje" => "Fechas de inicio y fin necesarias"]);
                 } else {
@@ -252,27 +200,24 @@ class RetirosController
                     $retirosFiltrados = Retiro::filtrar_para_mostrar($retiros);
                     $retorno = json_encode(["Retiros" => $retirosFiltrados]);
                 }
-            } else {
-                $retorno = json_encode(["mensaje" => $respuesta]);
-            }
-        }
-    
+       
+               
+                $usuario =Usuario::obtenerInstanciaVacia(); // Instanciar un objeto Usuario sin proporcionar argumentos
+                $operationNumber = $usuario->obtenerOperationNumber();
+                // Registrar la transacción en el log
+                $logger = AccesoDatos::obtenerConexionDatos()->obtenerLogger();
+                $logger->logTransaction($userId, $operationNumber);
         $response->getBody()->write($retorno);
         return $response;
     }
     
 
+    //ok visto
     public static function GET_traer_retiros_por_tipo_cuenta(Request $request, Response $response, array $args)
     {
         $param = $request->getQueryParams();
     
-        if (!isset($param['token'])) {
-            $retorno = json_encode(["mensaje" => "Token necesario"]);
-        } else {
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-    
-            if ($respuesta == "Validado") {
+        
                 if (!isset($param['tipo_cuenta'])) {
                     $retorno = json_encode(["mensaje" => "Tipo de cuenta necesario"]);
                 } else {
@@ -282,15 +227,13 @@ class RetirosController
     
                         // Filtrar y devolver el resultado
                         $retirosFiltrados = Retiro::filtrar_para_mostrar($retiros);
-                        $retorno = json_encode(["Depositos" => $retirosFiltrados]);
+                        $retorno = json_encode(["Retiros" => $retirosFiltrados]);
                     } else {
                         $retorno = json_encode(["mensaje" => "Tipo de cuenta no válido. Debe ser 'CA' o 'CC'."]);
                     }
                 }
-            } else {
-                $retorno = json_encode(["mensaje" => $respuesta]);
-            }
-        }
+           
+        
     
         $response->getBody()->write($retorno);
         return $response;
@@ -298,17 +241,15 @@ class RetirosController
     
 
 
+    //ok visto
     public static function GET_traer_retiros_por_tipo_moneda(Request $request, Response $response, array $args)
     {
+        $token = $request->getHeaderLine('Authorization');
+        $userId = self::obtenerUserIdDesdeToken($token);
+        
         $param = $request->getQueryParams();
     
-        if (!isset($param['token'])) {
-            $retorno = json_encode(["mensaje" => "Token necesario"]);
-        } else {
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-    
-            if ($respuesta == "Validado") {
+       
                 if (!isset($param['tipo_moneda'])) {
                     $retorno = json_encode(["mensaje" => "Tipo de moneda necesario"]);
                 } else {
@@ -322,18 +263,38 @@ class RetirosController
                     } else {
                         $retorno = json_encode(["mensaje" => "Tipo de moneda no válido. Debe ser '$' o 'USD'."]);
                     }
-                }
-            } else {
-                $retorno = json_encode(["mensaje" => $respuesta]);
-            }
+          
         }
+
+                
+                $usuario =Usuario::obtenerInstanciaVacia(); // Instanciar un objeto Usuario sin proporcionar argumentos
+                $operationNumber = $usuario->obtenerOperationNumber();
+                // Registrar la transacción en el log
+                $logger = AccesoDatos::obtenerConexionDatos()->obtenerLogger();
+                $logger->logTransaction($userId, $operationNumber);
     
         $response->getBody()->write($retorno);
         return $response;
     }
 
 
-
+    public static function obtenerUserIdDesdeToken($token)
+    {
+        try {
+            // Verificar y decodificar el token
+            $payload = AutentificadorJWT::ObtenerData($token);
+    
+            // Verificar si se obtuvo el ID del usuario desde el token
+            if (isset($payload['email'])) {
+                return $payload['email'];
+            } else {
+                return null; // No se encontró el ID del usuario en el payload del token
+            }
+        } catch (Exception $e) {
+            // Manejar cualquier excepción que pueda ocurrir al decodificar el token
+            return null;
+        }
+    }
 
 
 

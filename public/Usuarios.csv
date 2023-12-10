@@ -1,4 +1,5 @@
-id,nombre,apellido,tipo,sub_tipo,sector,email,password,fecha_registro
-1,Gustavo,Leiva,Admin,socio,administracion,leiva@gmail.com,12345,"2023-11-18 21:17:49"
-173,dario,guitierrez,Empleado,Mozo,Cocina,d@gmail.com,12345,"2023-11-18 00:00:00"
-174,paula,rodriguez,Empleado,Mozo,restaurante,p@gmail.com,12345,"2023-11-20 00:00:00"
+id,email,tipo,password
+100000,admin@gmail.com,administrador,12345
+100001,ramiro@gmail.com,cajero,12345
+100003,maria@gmail.com,operador,12345
+100005,leiva@gmail.com,supervisor,12345

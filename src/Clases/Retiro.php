@@ -203,6 +203,75 @@ class Retiro{
 //     }
 // }
 
+// public function insertarRetiro()
+// {
+//     $objetoAccesoDato = AccesoDatos::obtenerConexionDatos();
+
+//     try {
+//         // Comenzar la transacción
+//         $objetoAccesoDato->beginTransaction();
+
+//         // Verificar si el número de cuenta existe
+//         $consultaVerificarCuenta = $objetoAccesoDato->retornarConsulta("SELECT COUNT(*) FROM cuentas WHERE id = :idCuenta");
+//         $consultaVerificarCuenta->bindValue(':idCuenta', $this->numeroCuenta, PDO::PARAM_INT);
+//         $consultaVerificarCuenta->execute();
+
+//         $cuentaExistente = $consultaVerificarCuenta->fetchColumn();
+
+//         if ($cuentaExistente > 0) {
+//             // La cuenta existe, continuar con el retiro
+//             $consultaInsertarRetiro = $objetoAccesoDato->retornarConsulta("INSERT INTO retiros (numeroCuenta, tipoCuenta, moneda, nombre, importeRetirar, fechaRetiro) VALUES (:numeroCuenta, :tipoCuenta, :moneda, :nombre,:importeRetirar, :fechaRetiro)");
+//             $consultaInsertarRetiro->bindValue(':numeroCuenta', $this->numeroCuenta, PDO::PARAM_INT);
+//             $consultaInsertarRetiro->bindValue(':tipoCuenta', $this->tipoCuenta, PDO::PARAM_STR);
+//             $consultaInsertarRetiro->bindValue(':moneda', $this->moneda, PDO::PARAM_STR);
+//             $consultaInsertarRetiro->bindValue(':nombre', $this->nombre, PDO::PARAM_STR);
+//             $consultaInsertarRetiro->bindValue(':importeRetirar', $this->importeRetirar, PDO::PARAM_STR);
+//             $consultaInsertarRetiro->bindValue(':fechaRetiro', $this->fechaRetiro, PDO::PARAM_STR);
+//             $consultaInsertarRetiro->execute();
+
+           
+//             // Obtener el saldo actual de la cuenta
+//             $consultaSaldo = $objetoAccesoDato->retornarConsulta("SELECT saldo FROM cuentas WHERE id = :idCuenta");
+//             $consultaSaldo->bindValue(':idCuenta', $this->numeroCuenta, PDO::PARAM_INT);
+//             $consultaSaldo->execute();
+//             $saldoActual = $consultaSaldo->fetchColumn();
+
+//             // Verificar si el saldo a retirar es mayor que el saldo actual
+//             if ($this->importeRetirar > $saldoActual) {
+//                 // Saldo a retirar es mayor que el saldo actual, abortar la transacción
+//                 $objetoAccesoDato->rollBack();
+//                 return json_encode(["mensaje" => "El importe a retirar es mayor a su saldo actual"]);
+//             }
+
+//             // Calcular el nuevo saldo
+//             $nuevoSaldo = $saldoActual - $this->importeRetirar;
+
+//             // Actualizar el saldo en la cuenta
+//             $consultaActualizarSaldo = $objetoAccesoDato->retornarConsulta("UPDATE cuentas SET saldo = :nuevoSaldo WHERE id = :idCuenta");
+//             $consultaActualizarSaldo->bindValue(':nuevoSaldo', $nuevoSaldo, PDO::PARAM_STR);
+//             $consultaActualizarSaldo->bindValue(':idCuenta', $this->numeroCuenta, PDO::PARAM_INT);
+//             $consultaActualizarSaldo->execute();
+
+//             // Confirmar la transacción
+//             $objetoAccesoDato->commit();
+//             return json_encode(["mensaje" => "Retiro realizado con exito"]);
+//         } else {
+//             // La cuenta no existe, abortar la transacción
+//             $objetoAccesoDato->rollBack();
+//             return json_encode(["mensaje" => "El numero de cuenta no existe"]);
+//         }
+//     } catch (PDOException $e) {
+//         // Revertir la transacción en caso de error
+//         $objetoAccesoDato->rollBack();
+//         return json_encode(["mensaje" => $e->getMessage()]);
+//     } catch (Exception $e) {
+//         // Revertir la transacción en caso de error
+//         $objetoAccesoDato->rollBack();
+//         return json_encode(["mensaje" => $e->getMessage()]);
+//     }
+    
+// }
+
 public function insertarRetiro()
 {
     $objetoAccesoDato = AccesoDatos::obtenerConexionDatos();
@@ -212,13 +281,12 @@ public function insertarRetiro()
         $objetoAccesoDato->beginTransaction();
 
         // Verificar si el número de cuenta existe
-        $consultaVerificarCuenta = $objetoAccesoDato->retornarConsulta("SELECT COUNT(*) FROM cuentas WHERE id = :idCuenta");
+        $consultaVerificarCuenta = $objetoAccesoDato->retornarConsulta("SELECT saldo FROM cuentas WHERE id = :idCuenta");
         $consultaVerificarCuenta->bindValue(':idCuenta', $this->numeroCuenta, PDO::PARAM_INT);
         $consultaVerificarCuenta->execute();
+        $saldoActual = $consultaVerificarCuenta->fetchColumn();
 
-        $cuentaExistente = $consultaVerificarCuenta->fetchColumn();
-
-        if ($cuentaExistente > 0) {
+        if ($saldoActual !== false) {
             // La cuenta existe, continuar con el retiro
             $consultaInsertarRetiro = $objetoAccesoDato->retornarConsulta("INSERT INTO retiros (numeroCuenta, tipoCuenta, moneda, nombre, importeRetirar, fechaRetiro) VALUES (:numeroCuenta, :tipoCuenta, :moneda, :nombre,:importeRetirar, :fechaRetiro)");
             $consultaInsertarRetiro->bindValue(':numeroCuenta', $this->numeroCuenta, PDO::PARAM_INT);
@@ -229,21 +297,7 @@ public function insertarRetiro()
             $consultaInsertarRetiro->bindValue(':fechaRetiro', $this->fechaRetiro, PDO::PARAM_STR);
             $consultaInsertarRetiro->execute();
 
-           
-            // Obtener el saldo actual de la cuenta
-            $consultaSaldo = $objetoAccesoDato->retornarConsulta("SELECT saldo FROM cuentas WHERE id = :idCuenta");
-            $consultaSaldo->bindValue(':idCuenta', $this->numeroCuenta, PDO::PARAM_INT);
-            $consultaSaldo->execute();
-            $saldoActual = $consultaSaldo->fetchColumn();
-
-            // Verificar si el saldo a retirar es mayor que el saldo actual
-            if ($this->importeRetirar > $saldoActual) {
-                // Saldo a retirar es mayor que el saldo actual, abortar la transacción
-                $objetoAccesoDato->rollBack();
-                return json_encode(["mensaje" => "El importe a retirar es mayor a su saldo actual"]);
-            }
-
-            // Calcular el nuevo saldo
+            // Obtener el nuevo saldo después de la inserción
             $nuevoSaldo = $saldoActual - $this->importeRetirar;
 
             // Actualizar el saldo en la cuenta
@@ -258,12 +312,12 @@ public function insertarRetiro()
         } else {
             // La cuenta no existe, abortar la transacción
             $objetoAccesoDato->rollBack();
-            return json_encode(["mensaje" => "El numero de cuenta no existe"]);
+            throw new Exception("El numero de cuenta no existe");
         }
     } catch (Exception $e) {
         // Revertir la transacción en caso de error
         $objetoAccesoDato->rollBack();
-        return json_encode(["mensaje" => $e->getMessage()]);
+        throw $e; // Propagar la excepción para ser manejada en el controlador
     }
 }
 

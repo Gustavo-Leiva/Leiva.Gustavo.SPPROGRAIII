@@ -103,13 +103,15 @@ class Cuenta
     public static function traer_un_cuentaId($id) 
 	{
         $cuenta = null;
+        $cuenta = new Cuenta();//esto agregue a lo ultimo
+        $cuenta->id = $id; //esto agregue a lo ultimo
         $objetoAccesoDato = AccesoDatos::obtenerConexionDatos(); 
         $consulta =$objetoAccesoDato->retornarConsulta("SELECT * from cuentas where id = ?");
         $consulta->bindValue(1, $id, PDO::PARAM_INT);
         $consulta->execute();
         $cuentaBuscada= $consulta->fetchObject();
         if($cuentaBuscada != null){
-            $cuenta= new Usuario($cuentaBuscada->nombre, $cuentaBuscada->apellido, $cuentaBuscada->tipoDni,$cuentaBuscada->documento, $cuentaBuscada->email,
+            $cuenta= new Cuenta($cuentaBuscada->nombre, $cuentaBuscada->apellido, $cuentaBuscada->tipoDni,$cuentaBuscada->documento, $cuentaBuscada->email,
             $cuentaBuscada->tipoCuenta,$cuentaBuscada->moneda,$cuentaBuscada->rol,$cuentaBuscada->saldo,$cuentaBuscada->password, $cuentaBuscada->fechaRegistro, $cuentaBuscada->fechaBaja, $cuentaBuscada->id,$cuentaBuscada->token);
         }
         return $cuenta;
@@ -315,14 +317,14 @@ public function darDeBajaCuenta()
 
 public function definir_destino_backup($ruta)
 {
-    $rutaBackup = 'C:\xampp\htdocs\Cuenta-Bancaria-II\src\Controllers\Imagen\foto_del_usuario\cliente\imagenesBackupCuentas\2023';
+    $rutaBackup = 'C:\xampp\htdocs\CuentasBancariasII\src\Controllers\Imagen\foto_del_usuario\cliente\imagenesBackupCuentas\2023';
     $destino = $rutaBackup . "\\" . $this->id . "-" . $this->tipoCuenta . ".png";
     return $destino;
 }
 
 public function obtenerRutaFoto()
 {
-    $rutaImagenCuenta = 'C:\xampp\htdocs\Cuenta-Bancaria-II\src\Controllers\Imagen\foto_del_usuario\cliente\imagenesDeCuenta\2023';
+    $rutaImagenCuenta = 'C:\xampp\htdocs\CuentasBancariasII\src\Controllers\Imagen\foto_del_usuario\cliente\imagenesDeCuenta\2023';
     
     // Limpiar $this->tipoCuenta y eliminar espacios en blanco
     $tipoCuentaLimpiado = trim($this->tipoCuenta);

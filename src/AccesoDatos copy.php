@@ -1,22 +1,14 @@
 <?php
-require_once '../src/Clases/Logger.php';
-
-
 class AccesoDatos
 {
     private static $ObjetoAccesoDatos;
     private $objetoPDO;
-    private $logger;
 
     private function __construct()
     {
         try { 
             $this->objetoPDO = new PDO('mysql:host=localhost;dbname=cuentasbancarias;charset=utf8', 'root', '', array(PDO::ATTR_EMULATE_PREPARES => false,PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
             $this->objetoPDO->exec("SET CHARACTER SET utf8");
-
-            // Configura el logger
-            $this->logger = new Logger($this->objetoPDO);
-
             } 
         catch (PDOException $e) { 
             print "Error!: " . $e->getMessage(); 
@@ -56,11 +48,6 @@ class AccesoDatos
     public function rollBack()
     {
         return $this->objetoPDO->rollBack();
-    }
-
-    public function obtenerLogger()
-    {
-        return $this->logger;
     }
 
     public function __clone()

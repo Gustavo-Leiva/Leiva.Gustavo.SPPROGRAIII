@@ -8,7 +8,7 @@ use Autenticador;
 use AccesoDatos;
 
 require_once '../src/Clases/Cuenta.php';
-require_once '../src/Clases/Autenticador.php';
+require_once '../src/Clases/AutentificadorJWT.php';
 require_once '../src/AccesoDatos.php';
 
 class CuentasController
@@ -22,6 +22,7 @@ class CuentasController
     }
 
 
+    //ok visto
      public static function POST_Login(Request $request, Response $response, array $args){
         $parametros = $request->getParsedBody();
 
@@ -39,7 +40,6 @@ class CuentasController
                     "token" => $token
                 );
                 $usuarioEncontrado->modificar_token_DB($data);
-                // $retorno = json_encode(array("mensaje" => "Proceso exitoso"));
                 $retorno = json_encode(array("mensaje" => "Proceso exitoso", "token" => $token));
             
             }
@@ -54,19 +54,12 @@ class CuentasController
         return $response;
     }
 
+    //ok visto
     public static function POST_InsertarCuenta(Request $request, Response $response, array $args){
-        $param = $request->getQueryParams();
-        $rutaImagenCuenta = 'C:\xampp\htdocs\Cuenta-Bancaria-II\src\Controllers\Imagen\foto_del_usuario\cliente\imagenesDeCuenta\2023';
+       
+        $rutaImagenCuenta = 'C:\xampp\htdocs\CuentasBancariasII\src\Controllers\Imagen\foto_del_usuario\cliente\imagenesDeCuenta\2023';
 
-        if(!isset($param['token'])){
-            $retorno = json_encode(array("mensaje" => "Token necesario"));
-        }
-        else{
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-            if($respuesta == "Validado")
-            {
-              
+                     
                 $parametros = $request->getParsedBody();
                 $nombre = $parametros['nombre'];
                 $apellido = $parametros['apellido'];
@@ -99,11 +92,7 @@ class CuentasController
                 else{
                     $retorno = json_encode(array("mensaje" => "No se pudo crear la cuenta"));
                 }           
-            }       
-            else{
-                $retorno = json_encode(array("mensaje" => $respuesta));
-            }
-        }
+                
         $response->getBody()->write($retorno);
         return $response;
     }
@@ -112,59 +101,37 @@ class CuentasController
 
 
     public static function GET_TraerTodos(Request $request, Response $response, array $args){
-        $param = $request->getQueryParams();
-        if(!isset($param['token'])){
-            $retorno = json_encode(array("mensaje" => "Token necesario"));
-        }
-        else{
-            $token = $param['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-            $respuesta = Autenticador::validar_token($token, "Empleado");
-            if($respuesta == "Validado"){
                 $cuentas = Cuenta::traer_todas_las_cuentas();
                 $cuentasFiltradas = Cuenta::filtrar_para_mostrar($cuentas);
                 $retorno = json_encode(array("ListadoCuentas"=>$cuentasFiltradas));
-            }
-            else{
-                $retorno = json_encode(array("mensaje" => $respuesta));
-            }
-        }
-        $response->getBody()->write($retorno);
+                $response->getBody()->write($retorno);
         return $response;
     }
 
 
+    //ok visto
     public static function GET_TraerUno(Request $request, Response $response, array $args)
     {
         $parametros = $request->getQueryParams();
     
-        if (!isset($parametros['token'])) {
-            $retorno = json_encode(array("mensaje" => "Token necesario"));
-        } elseif (!isset($parametros['tipoCuenta']) || !isset($parametros['nro_cuenta']) || !isset($parametros['tipoMoneda'])) {
+        if (!isset($parametros['tipoCuenta']) || !isset($parametros['nro_cuenta']) || !isset($parametros['tipoMoneda'])) {
             $retorno = json_encode(array("mensaje" => "Se requieren el tipo de cuenta, el número de cuenta y el tipo de moneda"));
         } else {
-            $token = $parametros['token'];
-            $respuesta = Autenticador::validar_token($token, "Admin");
-            if ($respuesta == "Validado") {
-                $tipoCuenta = $parametros['tipoCuenta'];
-                $nroCuenta = $parametros['nro_cuenta'];
-                $tipoMoneda = $parametros['tipoMoneda'];
+            $tipoCuenta = $parametros['tipoCuenta'];
+            $nroCuenta = $parametros['nro_cuenta'];
+            $tipoMoneda = $parametros['tipoMoneda'];
     
-                // Validación del tipo de cuenta
-                if (!in_array($tipoCuenta, self::$tipoCuentas)) {
-                    $retorno = json_encode(array("mensaje" => "Tipo de cuenta no es valido. Debe ser 'CA' o 'CC'. "));
-                } else {
-                    // Validación del tipo de moneda
-                    if (!in_array($tipoMoneda, self::$tipoMoneda)) {
-                        $retorno = json_encode(array("mensaje" => "Moneda no es valida. Debe ser '$' o 'USD'."));
-                    } else {
-                        $resultado = Cuenta::consultarCuenta($tipoCuenta, $nroCuenta,$tipoMoneda);
-    
-                        $retorno = $resultado;
-                    }
-                }
+            // Validación del tipo de cuenta
+            if (!in_array($tipoCuenta, self::$tipoCuentas)) {
+                $retorno = json_encode(array("mensaje" => "Tipo de cuenta no es valido. Debe ser 'CA' o 'CC'. "));
             } else {
-                $retorno = json_encode(array("mensaje" => $respuesta));
+                // Validación del tipo de moneda
+                if (!in_array($tipoMoneda, self::$tipoMoneda)) {
+                    $retorno = json_encode(array("mensaje" => "Moneda no es valida. Debe ser '$' o 'USD'."));
+                } else {
+                    $resultado = Cuenta::consultarCuenta($tipoCuenta, $nroCuenta, $tipoMoneda);
+                    $retorno = $resultado;
+                }
             }
         }
     
@@ -177,9 +144,11 @@ class CuentasController
 
     
 
+    //ok visto
     public function POST_modificarCuenta($request, $response, $args)
     {
         $parametros = $request->getParsedBody();
+        // $parametros = json_decode($request->getBody()->getContents(), true);
     
         $id = $parametros['id'];
         $nombre = $parametros['nombre'];
@@ -251,11 +220,45 @@ class CuentasController
             $response->getBody()->write($payload);
         }
     
-        return $response;
+        return $response ->withHeader('Content-Type', 'application/json');
     }
     
    
-
+    //no reconoce el postman
+    public function DELETE_borrarCuenta($request, $response, $args)
+    {
+        // Obtén los datos del cuerpo de la solicitud
+        $parametros = $request->getParsedBody();
+    
+        // Verifica si 'id' está presente en los parámetros
+        $id = isset($parametros['id']) ? $parametros['id'] : null;
+    
+        if ($id !== null) {
+            // Crea la instancia de Cuenta y establece el ID
+            $cuenta = new Cuenta();
+            $cuenta->id = $id;
+    
+            // Realiza la operación para dar de baja la cuenta
+            $resultado = $cuenta->darDeBajaCuenta();
+    
+            // Devuelve el resultado en formato JSON
+            $payload = json_encode($resultado);
+    
+            // Escribe el resultado en el cuerpo de la respuesta
+            $response->getBody()->write($payload);
+        } else {
+            // Manejar el caso en el que 'id' no está presente en los parámetros
+            $resultado = ["mensaje" => "La clave 'id' no está presente en los parámetros"];
+            $payload = json_encode($resultado);
+            $response->getBody()->write($payload);
+        }
+    
+        return $response ->withHeader('Content-Type', 'application/json');
+    }
+    
+    
+    
+    
 
 
 
@@ -320,9 +323,9 @@ public function GET_operacionesCuenta($request, $response, $args)
     $cuenta = new Cuenta();
     $cuenta->id = $idCuenta;  // Asignar el ID de la cuenta
 
-    var_dump($idCuenta);
+    // var_dump($idCuenta);
     $operaciones = $cuenta->obtenerOperacionesCuenta();
-    var_dump($operaciones);
+    // var_dump($operaciones);
 
     $payload = json_encode($operaciones);
     $response->getBody()->write($payload);

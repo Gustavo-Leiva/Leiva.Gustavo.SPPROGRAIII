@@ -124,7 +124,7 @@ class Deposito{
 	{
         $deposito = null;
         $objetoAccesoDato = AccesoDatos::obtenerConexionDatos(); 
-        $consulta =$objetoAccesoDato->retornarConsulta("select * from depositos where numeroCuenta = ?");
+        $consulta =$objetoAccesoDato->retornarConsulta("select * from depositos where id = ?");
         $consulta->bindValue(1, $id, PDO::PARAM_INT);
         $consulta->execute();
         $depositoBuscado= $consulta->fetchObject();
